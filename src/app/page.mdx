@@ -1,0 +1,17 @@
+# Keploy Go Quickstart
+
+MDX is **working**. This page is written in Markdown.
+
+| Tool   | Job                         |
+| ------ | --------------------------- |
+| Keploy | Records and replays API calls |
+| Gin    | Go web framework            |
+
+```go title="handler.go"
+func GenerateShortLink(initialLink string) string {
+	urlHashBytes := sha256Of(initialLink)
+	generatedNumber := new(big.Int).SetBytes(urlHashBytes).Uint64()
+	finalString := base58Encoded([]byte(fmt.Sprintf("%d", generatedNumber)))
+	return finalString[:8]
+}
+```
