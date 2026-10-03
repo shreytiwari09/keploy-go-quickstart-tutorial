@@ -16,7 +16,7 @@ Say you have a Go API that talks to MongoDB. To test it properly you'd normally:
 2. write assertions for every field in every response, and
 3. fake ("mock") the database so the tests don't need a real one.
 
-Step 3 is usually the painful one. Keploy does all three for you, by **watching your app while you use it**:
+Mocking the database is usually the painful part. Keploy does all three for you, by **watching your app while you use it**:
 
 <FlowDiagram />
 
@@ -102,7 +102,7 @@ Logged in successfully!
 You are on the Keploy Free plan.
 ```
 
-You only do this once. After signing in, the site may show a "Keploy MCP" page. You can close it, you don't need it for this guide.
+You only do this once. After signing in, the site may show a "Keploy MCP" page. You can close it; you don't need it for this guide.
 
 <Callout type="warning" title="What tripped me up: the login link expires in 60 seconds">
   I skipped this step, so `keploy record` asked me to log in halfway through starting up. By the time I'd created an account, the link had expired and recording quit with `authentication timed out after 1 minute ... invalid or expired code`. Logging in **before** recording avoids it.
@@ -324,7 +324,7 @@ Change `[:6]` back to `[:8]` and rebuild, and you're green again.
 
 ## How it works under the hood
 
-On macOS, Keploy starts your binary with a small shim library injected (via `DYLD_INSERT_LIBRARIES`; you can see it in the `Starting Application` log line). The shim routes the app's network traffic through a Keploy proxy on port `16789`. Keploy understands the protocols passing through, HTTP for incoming requests and MongoDB's wire protocol for outgoing ones, so it can save them as readable YAML and later play either side back. On Linux, Keploy uses eBPF to do the same interception at the kernel level.
+On macOS, Keploy starts your binary with a small shim library injected (via `DYLD_INSERT_LIBRARIES`; you can see it in the `Starting Application` log line). The shim routes the app's network traffic through a Keploy proxy on port `16789`. Keploy understands the protocols passing through (HTTP for incoming requests, MongoDB's wire protocol for outgoing ones), so it can save them as readable YAML and later play either side back. On Linux, Keploy uses eBPF hooks in the kernel to do the same interception.
 
 None of this touches your source code. That's why the same steps work for any Go framework.
 

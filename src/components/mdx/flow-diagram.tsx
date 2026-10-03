@@ -22,7 +22,7 @@ const modes = {
     ],
     steps: [
       "You use the app normally. Keploy sits on both sides of it.",
-      "Each incoming request and the app's response become a test case.",
+      "Each incoming request, plus the app's response, becomes a test case.",
       "Each call the app makes to MongoDB, and Mongo's answer, becomes a mock.",
     ],
   },
