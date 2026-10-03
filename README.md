@@ -2,7 +2,9 @@
 
 A single-page, beginner-friendly tutorial on recording and replaying API tests for a Go app with [Keploy](https://keploy.io). It's written from my own first run of Keploy's **Gin + MongoDB** quickstart on an Apple Silicon Mac, including the errors I hit and how I fixed them.
 
-The site is built with **Next.js** and **MDX**, styled with **Tailwind CSS**, and statically generated.
+**Live site: [keploy-go-quickstart-tutorial-gilt.vercel.app](https://keploy-go-quickstart-tutorial-gilt.vercel.app)**
+
+The site is built with **Next.js** and **MDX**, styled with **Tailwind CSS**, statically generated, and deployed on Vercel.
 
 ## What the tutorial covers
 
