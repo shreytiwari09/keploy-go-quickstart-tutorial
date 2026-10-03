@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Your First Keploy Tests in Go
 
-## Getting Started
+A single-page, beginner-friendly tutorial on recording and replaying API tests for a Go app with [Keploy](https://keploy.io). It's written from my own first run of Keploy's **Gin + MongoDB** quickstart on an Apple Silicon Mac, including the errors I hit and how I fixed them.
 
-First, run the development server:
+The site is built with **Next.js** and **MDX**, styled with **Tailwind CSS**, and statically generated.
+
+## What the tutorial covers
+
+- What Keploy does and why it's useful for Go developers
+- Installing Keploy, logging in, and running the sample app with MongoDB in Docker
+- Recording test cases with `keploy record`, and what Keploy writes to disk (tests, mocks, noise)
+- Replaying with `keploy test` **with the database switched off**
+- Catching a deliberate regression
+- Troubleshooting the real errors from my run
+
+## Features
+
+- **MDX content.** The whole tutorial lives in [`src/app/page.mdx`](src/app/page.mdx): Markdown with React components mixed in.
+- **Custom components**: `<Callout>`, `<Steps>`, `<Tabs>`, `<Troubleshoot>` and an interactive record/replay `<FlowDiagram>`
+- **Syntax highlighting** with [rehype-pretty-code](https://rehype-pretty.pages.dev/) and Shiki, with separate light and dark themes, file titles and highlighted lines
+- **Copy button** on every code block
+- **Dark/light mode toggle** that follows the system setting, remembers your choice, and doesn't flash on load
+- **"On this page" sidebar** generated from the MDX headings at build time, highlighting the section you're reading
+- **Reading progress bar** using CSS scroll-driven animations, with no JavaScript
+- **Responsive** down to phone widths
+- **Social preview image** generated at build time
+
+## Running locally
+
+Requires Node.js 20.9 or newer.
 
 ```bash
+git clone https://github.com/shreytiwari09/keploy-go-quickstart-tutorial.git
+cd keploy-go-quickstart-tutorial
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server with hot reload |
+| `npm run build` | Build the static production site |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Run ESLint |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+```txt
+src/
+├── app/
+│   ├── page.mdx              # The tutorial
+│   ├── layout.tsx            # Header, sidebar, footer, theme script, metadata
+│   ├── globals.css           # Theme colours, code block and step styles
+│   ├── icon.svg              # Favicon
+│   └── opengraph-image.tsx   # Social preview image
+├── components/
+│   ├── mdx/                  # Components used inside page.mdx
+│   ├── site-header.tsx
+│   ├── table-of-contents.tsx
+│   └── theme-toggle.tsx
+├── lib/
+│   └── toc.ts                # Builds the sidebar from page.mdx headings
+└── mdx-components.tsx        # Registers MDX components and overrides (e.g. <pre>)
+```
 
-To learn more about Next.js, take a look at the following resources:
+## How MDX is wired up
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [`next.config.ts`](next.config.ts) enables `@next/mdx` and registers the remark/rehype plugins (`remark-gfm`, `rehype-slug`, `rehype-pretty-code`). Plugins are passed by name so they work with Turbopack.
+- [`src/mdx-components.tsx`](src/mdx-components.tsx) makes the custom components available in every `.mdx` file without importing them, and replaces `<pre>` with a version that has a copy button.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech stack
 
-## Deploy on Vercel
+Next.js 16 (App Router) · React 19 · MDX 3 · Tailwind CSS 4 · Shiki · Lucide icons · TypeScript
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Written by Shrey Tiwari.

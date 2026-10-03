@@ -41,8 +41,9 @@ export default function OpengraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ fontSize: 76, fontWeight: 700, letterSpacing: -2 }}>Your First Keploy Tests in Go</div>
-          <div style={{ fontSize: 34, color: "#a1a1aa" }}>
-            Record real API traffic, replay it as tests. No test code, no database.
+          <div style={{ display: "flex", flexDirection: "column", fontSize: 34, color: "#a1a1aa" }}>
+            <div>Record real API traffic, replay it as tests.</div>
+            <div>No test code. No database.</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 16, fontSize: 26, color: "#fb923c" }}>
