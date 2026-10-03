@@ -1,26 +1,167 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Dark mode is driven by a `dark` class on <html> (set by the theme toggle). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #18181b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --surface: #fafafa;
+  --code-bg: #f6f8fa;
+  --accent: #ea580c;
+  --accent-soft: #fff7ed;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --surface: #121214;
+  --code-bg: #111113;
+  --accent: #fb923c;
+  --accent-soft: #1c1410;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* ---------- Code blocks (rehype-pretty-code + shiki) ---------- */
+
+[data-rehype-pretty-code-figure] {
+  margin: 1.5rem 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--code-bg);
+}
+
+[data-rehype-pretty-code-figure] pre {
+  margin: 0;
+  padding: 1rem 0;
+  overflow-x: auto;
+  background: transparent;
+  border-radius: 0;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+[data-rehype-pretty-code-figure] code {
+  display: grid;
+  min-width: 100%;
+}
+
+[data-rehype-pretty-code-figure] [data-line] {
+  padding: 0 1.25rem;
+}
+
+[data-rehype-pretty-code-figure] [data-highlighted-line] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+[data-rehype-pretty-code-title] {
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/* Shiki emits both themes as CSS variables; pick one per mode. */
+[data-rehype-pretty-code-figure] code span {
+  color: var(--shiki-light);
+}
+
+.dark [data-rehype-pretty-code-figure] code span {
+  color: var(--shiki-dark);
+}
+
+/* ---------- <Steps> ---------- */
+
+.steps {
+  counter-reset: step;
+  margin-left: 1rem;
+  padding-left: 2rem;
+  border-left: 1px solid var(--border);
+}
+
+.steps > h3 {
+  counter-increment: step;
+  position: relative;
+}
+
+.steps > h3::before {
+  content: counter(step);
+  position: absolute;
+  left: -3rem;
+  top: -0.1rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--background);
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* ---------- Reading progress (pure CSS, scroll-driven) ---------- */
+
+.reading-progress {
+  display: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .reading-progress {
+    display: block;
+    transform-origin: 0 50%;
+    animation: grow-progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+
+@keyframes grow-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- Inline code ---------- */
+
+.prose :not(pre) > code {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--surface);
+  font-size: 0.85em;
+  font-weight: 500;
 }
