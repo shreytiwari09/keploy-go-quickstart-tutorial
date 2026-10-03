@@ -9,8 +9,8 @@ export type TocItem = { id: string; text: string; level: 2 | 3 };
  * in page.mdx. Uses the same slugger as rehype-slug, so the ids match the
  * anchors on the rendered headings.
  */
-export function getToc(file = "src/app/page.mdx"): TocItem[] {
-  const source = readFileSync(path.join(process.cwd(), file), "utf8");
+export function getToc(): TocItem[] {
+  const source = readFileSync(path.join(process.cwd(), "src/app/page.mdx"), "utf8");
   const slugger = new GithubSlugger();
   const items: TocItem[] = [];
   let inCodeFence = false;

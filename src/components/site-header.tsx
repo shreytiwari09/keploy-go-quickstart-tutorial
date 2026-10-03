@@ -1,3 +1,4 @@
+import { Play } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const REPO_URL = "https://github.com/shreytiwari09/keploy-go-quickstart-tutorial";
@@ -8,8 +9,8 @@ export function SiteHeader() {
       <div className="reading-progress absolute inset-x-0 bottom-0 h-0.5 bg-accent" aria-hidden />
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <a href="#" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="grid size-7 place-items-center rounded-md bg-accent text-sm text-white dark:text-black">
-            K
+          <span className="grid size-7 place-items-center rounded-md bg-accent text-white dark:text-black">
+            <Play className="size-3.5 fill-current" aria-hidden />
           </span>
           <span>
             Keploy <span className="text-muted">+ Go</span>

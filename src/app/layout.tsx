@@ -16,10 +16,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = "Your First Keploy Tests in Go";
+const description =
+  "A beginner-friendly guide to recording and replaying API tests for a Go (Gin + MongoDB) app with Keploy, with no test code to write.";
+
+// Vercel sets this to the production domain; needed for absolute social-image URLs.
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Your First Keploy Tests in Go",
-  description:
-    "A beginner-friendly guide to recording and replaying API tests for a Go (Gin + MongoDB) app with Keploy, with no test code to write.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  authors: [{ name: "Shrey Tiwari" }],
+  openGraph: { title, description, type: "article" },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -38,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <div className="mx-auto flex max-w-6xl gap-12 px-4 sm:px-6 lg:px-8">
           <main className="min-w-0 flex-1 py-10 lg:py-14">
-            <article className="prose prose-zinc mx-auto max-w-3xl dark:prose-invert prose-headings:scroll-mt-20 prose-headings:tracking-tight prose-a:text-accent prose-a:underline-offset-4 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0">
+            <article className="prose prose-zinc mx-auto max-w-3xl dark:prose-invert prose-headings:tracking-tight prose-a:text-accent prose-a:underline-offset-4 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-transparent prose-pre:p-0">
               {children}
             </article>
           </main>
