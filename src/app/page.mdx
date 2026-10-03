@@ -1,21 +1,58 @@
-# Keploy Go Quickstart
+# Component test
 
-MDX is **working**. Run `keploy record` to start.
+<FlowDiagram />
 
-## What is Keploy
+<Callout type="tip">
+  Run `keploy login` **before** recording. The browser link expires in 60 seconds.
+</Callout>
 
-Some text.
+<Callout type="warning" title="MongoDB 8+ crashes on new Docker Desktop">
+  Pin `mongo:7` in `docker-compose.yaml`.
+</Callout>
 
-## Recording tests
+## Install
 
-### Start the app
+<Tabs items={["Homebrew", "Install script"]}>
+<Tab>
 
-```go title="handler.go"
-func GenerateShortLink(initialLink string) string {
-	return finalString[:8]
-}
+```bash
+brew install keploy/tap/keploy
 ```
 
-### Send requests
+</Tab>
+<Tab>
 
-Text.
+```bash
+curl --silent -O -L https://keploy.io/install.sh && source install.sh
+```
+
+</Tab>
+</Tabs>
+
+## Steps
+
+<Steps>
+
+### Start Mongo
+
+```bash
+docker compose up -d mongo
+```
+
+### Record
+
+Run `keploy record`.
+
+</Steps>
+
+## Troubleshooting
+
+<Troubleshoot title="network keploy-network declared as external, but could not be found">
+
+Create it once:
+
+```bash
+docker network create keploy-network
+```
+
+</Troubleshoot>
