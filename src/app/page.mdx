@@ -1,58 +1,377 @@
-# Component test
+# Your First Keploy Tests in Go
+
+Record real traffic to a Go API, then replay it as tests. You don't write any test code, and the tests don't need a database to run.
+
+I'd never used Keploy before this, and I'm new to Go too. This guide is what I wish I'd had on my first run: every command, why it works, and the things that tripped me up on an Apple Silicon Mac.
+
+<Callout type="info" title="Tested with">
+  Keploy 3.8.58 · Go 1.27 · Docker Desktop · macOS on Apple Silicon (October 2026). Takes about 20 minutes.
+</Callout>
+
+## Why Keploy?
+
+Say you have a Go API that talks to MongoDB. To test it properly you'd normally:
+
+1. write code that sends requests to each endpoint,
+2. write assertions for every field in every response, and
+3. fake ("mock") the database so the tests don't need a real one.
+
+Step 3 is usually the painful one. Keploy does all three for you, by **watching your app while you use it**:
 
 <FlowDiagram />
 
-<Callout type="tip">
-  Run `keploy login` **before** recording. The browser link expires in 60 seconds.
+Try both buttons above. That's the whole idea:
+
+- **`keploy record`** runs your app and captures every request, every response, and every database call it makes. Requests become **test cases**, database calls become **mocks**.
+- **`keploy test`** runs your app again, replays those requests, and answers its database calls from the mocks. If a response changed, the test fails.
+
+Why this is handy for a Go developer:
+
+- **No code changes.** Keploy intercepts traffic at the network level, not inside your router, so it works the same with `net/http`, Gin, Echo, Fiber or chi. You don't import an SDK.
+- **Tests that don't need infrastructure.** Replays don't touch MongoDB, so they're fast and they run anywhere, including CI.
+- **Tests from real behaviour.** You test what the app actually did, not what you remembered to assert.
+
+## What you'll build
+
+You'll use Keploy's **Gin + MongoDB URL shortener** sample. It has two endpoints that matter here:
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /url` | Takes `{"url": "..."}`, hashes it into an 8-character code, saves it in MongoDB, returns the short link |
+| `GET /:code` | Looks the code up in MongoDB and redirects (`303`) to the original URL |
+
+By the end you'll have three recorded tests, eight MongoDB mocks, a passing test run **with the database switched off**, and a failing run that catches a bug you add on purpose.
+
+## Before you start
+
+You need:
+
+- **Go**, to build the sample app
+- **Docker Desktop**, running. MongoDB runs in a container.
+- **A free Keploy account.** You'll create it during setup.
+- **Homebrew** on macOS, or `curl` on Linux
+
+<Callout type="warning" title="What tripped me up: Keploy needs an account">
+  I assumed Keploy was a local-only CLI. It isn't: `keploy record` stops and waits for a browser login if you haven't signed in. It's free, and step 2 gets it out of the way first.
 </Callout>
 
-<Callout type="warning" title="MongoDB 8+ crashes on new Docker Desktop">
-  Pin `mongo:7` in `docker-compose.yaml`.
-</Callout>
+## Step-by-step
 
-## Install
+<Steps>
 
-<Tabs items={["Homebrew", "Install script"]}>
+### Install Go and Keploy
+
+<Tabs items={["macOS (Homebrew)", "Linux"]}>
 <Tab>
 
-```bash
-brew install keploy/tap/keploy
+```bash title="Terminal"
+brew install go keploy/tap/keploy
 ```
+
+Keploy runs natively on Apple Silicon. No Linux VM, and no Docker for Keploy itself.
 
 </Tab>
 <Tab>
 
-```bash
+Install Go from [go.dev/dl](https://go.dev/dl/), then:
+
+```bash title="Terminal"
 curl --silent -O -L https://keploy.io/install.sh && source install.sh
 ```
 
 </Tab>
 </Tabs>
 
-## Steps
+Check that both are on your `PATH`:
 
-<Steps>
-
-### Start Mongo
-
-```bash
-docker compose up -d mongo
+```bash title="Terminal"
+go version
+keploy --version
 ```
 
-### Record
+### Log in to Keploy
 
-Run `keploy record`.
+```bash title="Terminal"
+keploy login
+```
+
+A browser tab opens. Sign in (GitHub is quickest), approve the CLI, and the terminal prints:
+
+```txt
+Logged in successfully!
+You are on the Keploy Free plan.
+```
+
+You only do this once. After signing in, the site may show a "Keploy MCP" page. You can close it, you don't need it for this guide.
+
+<Callout type="warning" title="What tripped me up: the login link expires in 60 seconds">
+  I skipped this step, so `keploy record` asked me to log in halfway through starting up. By the time I'd created an account, the link had expired and recording quit with `authentication timed out after 1 minute ... invalid or expired code`. Logging in **before** recording avoids it.
+</Callout>
+
+### Get the sample app
+
+```bash title="Terminal"
+git clone https://github.com/keploy/samples-go.git
+cd samples-go/gin-mongo
+mv keploy keploy-original
+```
+
+The sample ships with a `keploy/` folder of tests someone else recorded. Moving it aside means everything you see from here on is your own recording.
+
+### Start MongoDB
+
+The sample's `docker-compose.yaml` expects a Docker network called `keploy-network` to already exist, so create it first:
+
+```bash title="Terminal"
+docker network create keploy-network
+```
+
+Next, open `docker-compose.yaml` and pin MongoDB to version 7:
+
+```yaml title="docker-compose.yaml" {2}
+  mongo:
+    image: "mongo:7"
+    container_name: mongoDB
+```
+
+Then start it and check that it stays up:
+
+```bash title="Terminal"
+docker compose up -d mongo
+docker ps
+```
+
+You want to see `mongoDB` with a status of `Up`.
+
+<Callout type="warning" title="What tripped me up: MongoDB crashed on startup">
+  The compose file says `image: "mongo"`, which pulls the newest MongoDB (9.0 for me). The container exited immediately. `docker logs mongoDB` said: *"MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility with this version of MongoDB."* Docker Desktop's VM runs a newer kernel than that, and MongoDB 8.0+ is affected ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Pinning `mongo:7` fixes it. Lesson: pin your image versions.
+</Callout>
+
+### Point the app at localhost
+
+The app is written to run inside Docker, where MongoDB is reachable by its container name. You'll run the app directly on your machine instead, so change the host to `localhost` in `main.go`:
+
+```go title="main.go" {1}
+client, err := New("localhost:27017", dbName)
+```
+
+<Callout type="info">
+  The official quickstart says this is on line 21. In the current code it's **line 35**. Search for `mongoDb:27017` if it moves again.
+</Callout>
+
+### Build the app
+
+```bash title="Terminal"
+go build -o test-app-url-shortener .
+```
+
+This compiles the app into a single binary. On macOS, Keploy's docs recommend recording a built binary rather than `go run`, which compiles and launches your app as a separate child process. With a binary, Keploy wraps exactly the process that serves your requests.
+
+### Record test cases
+
+Start your app *through* Keploy. `-c` is the command Keploy should run:
+
+```bash title="Terminal 1"
+keploy record -c "./test-app-url-shortener"
+```
+
+Wait until you see the Gin routes and `Started ingress forwarding`. From now on, every request to port `8080` passes through Keploy.
+
+In a **second terminal**, use the app. Shorten a URL:
+
+```bash title="Terminal 2"
+curl --request POST \
+  --url http://localhost:8080/url \
+  --header 'content-type: application/json' \
+  --data '{"url": "https://google.com"}'
+```
+
+```json
+{"ts":1791024807669190000,"url":"http://localhost:8080/Lhr4BWAi"}
+```
+
+Follow the short link (`-i` shows the redirect instead of following it):
+
+```bash title="Terminal 2"
+curl -i http://localhost:8080/Lhr4BWAi
+```
+
+```txt
+HTTP/1.1 303 See Other
+```
+
+Shorten one more URL so you have a few tests:
+
+```bash title="Terminal 2"
+curl --request POST \
+  --url http://localhost:8080/url \
+  --header 'content-type: application/json' \
+  --data '{"url": "https://keploy.io"}'
+```
+
+Back in terminal 1, Keploy logs a line for each request:
+
+```txt title="Terminal 1 (trimmed)"
+🟠 Keploy has captured test cases ... "testcase name": "post-url-1"
+🟠 Keploy has captured test cases ... "testcase name": "get-lhr4bwai-1"
+🟠 Keploy has captured test cases ... "testcase name": "post-url-2"
+```
+
+Press **Ctrl + C** to stop recording.
+
+<Callout type="tip" title="The first a-ha: Keploy checks its own recording">
+  Keploy doesn't exit straight away. It immediately **replays what it just recorded** ("auto-replay … to check for noise"), learns which fields change on every run, and finishes with `All 3 test(s) passed`. Add `--disableAutoReplay` if you want to skip this.
+</Callout>
+
+### Look at what Keploy saved
+
+```txt title="gin-mongo/keploy/"
+test-set-0/
+├── tests/
+│   ├── post-url-1.yaml       # POST google.com
+│   ├── get-lhr4bwai-1.yaml   # GET /Lhr4BWAi
+│   └── post-url-2.yaml       # POST keploy.io
+└── mocks.yaml                # every MongoDB call, with Mongo's replies
+```
+
+Open `tests/post-url-1.yaml`. It's plain YAML: the request, the response the app gave, and one more section:
+
+```yaml title="tests/post-url-1.yaml" {9-12}
+  req:
+    method: POST
+    url: http://localhost:8080/url
+    body: '{"url": "https://google.com"}'
+  resp:
+    status_code: 200
+    body: '{"ts":1791024807669190000,"url":"http://localhost:8080/Lhr4BWAi"}'
+  # ...
+  assertions:
+    noise:
+      body.ts: []
+      header.Date: []
+```
+
+<Callout type="tip" title="The second a-ha: noise">
+  The app puts `ts: time.Now().UnixNano()` in every response, so that value is **different every time**. A naive "compare the response" test would fail forever. Keploy noticed during auto-replay and marked `body.ts` and the `Date` header as **noise**: fields it ignores when comparing. I didn't configure anything.
+</Callout>
+
+`mocks.yaml` holds the database's side of the conversation: eight MongoDB exchanges, from the driver's connection handshake to the actual "save `Lhr4BWAi` → google.com" write. This is what lets the tests run without a database.
+
+### Replay the tests without MongoDB
+
+To prove the mocks work, stop the database first:
+
+```bash title="Terminal"
+docker stop mongoDB
+```
+
+Then run the tests:
+
+```bash title="Terminal"
+keploy test -c "./test-app-url-shortener" --delay 10
+```
+
+`--delay 10` tells Keploy to wait 10 seconds for the app to boot before sending requests. This app sleeps for 2 seconds on startup, so it needs a little room.
+
+```txt
+  COMPLETE TESTRUN SUMMARY.
+	Total tests: 3
+	Total test passed: 3
+	Total test failed: 0
+summary:  All 3 test(s) passed across 1 test-set(s). Suite is green and dependency-free.
+```
+
+The app thought it was talking to MongoDB the whole time. Keploy answered every query from `mocks.yaml`.
+
+### Catch a regression
+
+Tests that always pass prove nothing, so break something. In `handler.go`, make short codes 6 characters instead of 8:
+
+```go title="handler.go" {5}
+func GenerateShortLink(initialLink string) string {
+	urlHashBytes := sha256Of(initialLink)
+	generatedNumber := new(big.Int).SetBytes(urlHashBytes).Uint64()
+	finalString := base58Encoded([]byte(fmt.Sprintf("%d", generatedNumber)))
+	return finalString[:6]
+}
+```
+
+Rebuild and run the tests again:
+
+```bash title="Terminal"
+go build -o test-app-url-shortener .
+keploy test -c "./test-app-url-shortener" --delay 10
+```
+
+Two tests fail, and Keploy shows exactly what changed:
+
+```txt title="keploy test output (trimmed)"
+│              EXPECT BODY               │              ACTUAL BODY              │
+│ "url": "http://localhost:8080/Lhr4BWA… │ "url": "http://localhost:8080/Lhr4BW" │
+
+summary:  2 of 3 test(s) failed.
+```
+
+You never wrote "the code must be 8 characters long". Keploy only compared today's response with the recorded one.
+
+<Callout type="info" title="Why did one test still pass?">
+  `GET /Lhr4BWAi` only *looks up* a code. It never calls `GenerateShortLink`, so this bug can't affect it. Keploy can only catch regressions in the paths you recorded, so record the flows you care about.
+</Callout>
+
+Change `[:6]` back to `[:8]` and rebuild, and you're green again.
 
 </Steps>
 
+## How it works under the hood
+
+On macOS, Keploy starts your binary with a small shim library injected (via `DYLD_INSERT_LIBRARIES`; you can see it in the `Starting Application` log line). The shim routes the app's network traffic through a Keploy proxy on port `16789`. Keploy understands the protocols passing through, HTTP for incoming requests and MongoDB's wire protocol for outgoing ones, so it can save them as readable YAML and later play either side back. On Linux, Keploy uses eBPF to do the same interception at the kernel level.
+
+None of this touches your source code. That's why the same steps work for any Go framework.
+
 ## Troubleshooting
+
+These are the errors I actually hit, with their exact messages:
 
 <Troubleshoot title="network keploy-network declared as external, but could not be found">
 
-Create it once:
+The compose file expects the network to already exist. Create it once:
 
-```bash
+```bash title="Terminal"
 docker network create keploy-network
 ```
 
 </Troubleshoot>
+
+<Troubleshoot title="MongoDB cannot start: Linux kernel versions 6.19 and newer has a known incompatibility">
+
+The unpinned `mongo` image pulls MongoDB 8+, which crashes on Docker Desktop's newer kernel. Set `image: "mongo:7"` in `docker-compose.yaml`, then run `docker rm mongoDB` and `docker compose up -d mongo`.
+
+</Troubleshoot>
+
+<Troubleshoot title="authentication timed out after 1 minute; ... invalid or expired code">
+
+The browser login link expired before you finished signing in. Run `keploy login` on its own, finish in the browser, then start `keploy record` again.
+
+</Troubleshoot>
+
+<Troubleshoot title="[keploy-shim] the keploy agent is not answering (CONNECT)">
+
+If this appears right after you press Ctrl + C, it's harmless: the agent is shutting down. It only matters if it shows up *while* you're sending requests, and the recording ends with no mocks.
+
+</Troubleshoot>
+
+## Recap and next steps
+
+You recorded three API tests and eight database mocks by just using your app, replayed them with MongoDB switched off, and caught a real regression. You didn't write a single line of test code.
+
+Where to go next:
+
+- **Commit the `keploy/` folder** to your repo and run `keploy test` in CI on every pull request.
+- **Try another Go quickstart**, such as [Echo + PostgreSQL](https://keploy.io/docs/quickstart/samples-echo/), to see the same flow with a different database.
+- **Read the [Keploy docs](https://keploy.io/docs/)** for test sets, custom noise rules and more.
+
+When you're done, clean up:
+
+```bash title="Terminal"
+docker compose down
+```
